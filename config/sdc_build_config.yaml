@@ -1,0 +1,9 @@
+directories:
+  - pytorch-practice
+  - mcmd
+  - mtest
+
+build_rule:
+  - make purge
+  - make sdc
+  - make install
