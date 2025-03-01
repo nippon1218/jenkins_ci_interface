@@ -18,13 +18,9 @@ def extract_build_rules(file_path):
     # 创建一个包含所有构建规则的字典
     rules = {}
     
-    # 添加默认的build_rule
-    if 'build_rule' in config:
-        rules['build_rule'] = config['build_rule']
-    
-    # 添加其他可能的规则
+    # 添加所有包含 "rule" 的配置项
     for key in config:
-        if key.startswith('build_rule') and key != 'build_rule':
+        if 'rule' in key.lower() and isinstance(config[key], list):
             rules[key] = config[key]
     
     return rules

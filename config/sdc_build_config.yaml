@@ -4,14 +4,14 @@ directories:
   - name: mcmd
     rule: build_rule
   - name: mtest
-    rule: build_rule2
+    rule: python_rule
 
 build_rule:
   - make purge
   - make sdc
   - make install
 
-build_rule2:
+python_rule:
   - make purge2
   - make sdc2
   - make install2

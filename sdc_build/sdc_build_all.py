@@ -5,7 +5,7 @@ import logging
 import signal
 import sys
 from contextlib import contextmanager
-from dependency_parser import get_directory_build_info, extract_build_rules
+from sdc_config_parser import get_directory_build_info, extract_build_rules
 import time
 
 # 配置日志
