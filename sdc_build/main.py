@@ -3,6 +3,7 @@ import os
 import subprocess
 import logging
 import signal
+import sys
 from contextlib import contextmanager
 from dependency_parser import extract_list_from_file, extract_build_rule
 import time
@@ -52,9 +53,9 @@ def main():
     # 获取当前 main.py 所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 获取上两层目录
-    parent_dir = os.path.dirname(os.path.dirname(current_dir))
+    parent_dir = os.path.dirname(current_dir)
     # 构造 config 目录下 sdc_build_config.yaml 的路径
-    file_path = os.path.join(current_dir, "../config", "sdc_build_config.yaml")
+    file_path = os.path.join(parent_dir, "config", "sdc_build_config.yaml")
     
     sdc_list = extract_list_from_file(file_path)
     build_rule = extract_build_rule(file_path)
@@ -69,15 +70,19 @@ def main():
         return
 
     for directory in sdc_list:
+        # 看下目录是否合法 
+        full_path = os.path.join(os.path.dirname(parent_dir), directory)
+        if not os.path.exists(full_path):
+            logger.error(f"错误：目录 {full_path} 不存在 exit")
+            sys.exit(1)
+        if not os.path.isdir(full_path):
+            logger.error(f"错误：{full_path} 不是有效的目录")
+            sys.exit(1)
+
+    for directory in sdc_list:
         # 构造完整路径
-        full_path = os.path.join(parent_dir, directory)
+        full_path = os.path.join(os.path.dirname(parent_dir), directory)
         try:
-            if not os.path.exists(full_path):
-                logger.error(f"错误：目录 {full_path} 不存在")
-                continue
-            if not os.path.isdir(full_path):
-                logger.error(f"错误：{full_path} 不是有效的目录")
-                continue
             logger.info(f"\n{'='*30}\n▶ 开始构建目录: {directory}\n{'='*30}")
             total_start = time.time()
             
@@ -94,10 +99,10 @@ def main():
                             raise subprocess.CalledProcessError(proc.returncode, proc.args)
                 except subprocess.CalledProcessError as e:
                     logger.error("❌ 步骤失败 [退出码%d] - 命令: %s", e.returncode, e.cmd)
-                    raise
+                    sys.exit(e.returncode)
                 except subprocess.TimeoutExpired:
                     logger.error("⏰ 进程超时: %s", ' '.join(proc.args))
-                    raise
+                    sys.exit(1)
                 finally:
                     elapsed = time.time() - step_start
                     logger.debug("⏱️ 步骤耗时: %.2fs", elapsed)
