@@ -5,7 +5,7 @@ import logging
 import signal
 import sys
 from contextlib import contextmanager
-from dependency_parser import extract_list_from_file, extract_build_rule
+from dependency_parser import get_directory_build_info, extract_build_rules
 import time
 
 # 配置日志
@@ -57,19 +57,29 @@ def main():
     # 构造 config 目录下 sdc_build_config.yaml 的路径
     file_path = os.path.join(parent_dir, "config", "sdc_build_config.yaml")
     
-    sdc_list = extract_list_from_file(file_path)
-    build_rule = extract_build_rule(file_path)
-    logger.info("从 sdc_build_config.yaml 中提取的列表：")
-    logger.info(sdc_list)
-    logger.info(f"构建规则: {build_rule}")
+    # 获取目录和对应的构建规则
+    directory_info = get_directory_build_info(file_path)
+    # 获取所有构建规则
+    all_build_rules = extract_build_rules(file_path)
+    
+    logger.info("从 sdc_build_config.yaml 中提取的目录信息：")
+    for info in directory_info:
+        logger.info(f"目录: {info['name']}, 使用规则: {info['rule']}")
+    
+    logger.info("可用的构建规则：")
+    for rule_name, rules in all_build_rules.items():
+        logger.info(f"{rule_name}: {rules}")
 
-    # 验证构建规则
-    is_valid, error_msg = validate_build_rule(build_rule)
-    if not is_valid:
-        logger.error(f"错误：无效的构建规则 - {error_msg}")
-        return
+    # 验证所有构建规则
+    for rule_name, rules in all_build_rules.items():
+        is_valid, error_msg = validate_build_rule(rules)
+        if not is_valid:
+            logger.error(f"错误：无效的构建规则 {rule_name} - {error_msg}")
+            return
 
-    for directory in sdc_list:
+    # 验证所有目录是否存在
+    for info in directory_info:
+        directory = info['name']
         # 看下目录是否合法 
         full_path = os.path.join(os.path.dirname(parent_dir), directory)
         if not os.path.exists(full_path):
@@ -79,11 +89,22 @@ def main():
             logger.error(f"错误：{full_path} 不是有效的目录")
             sys.exit(1)
 
-    for directory in sdc_list:
+    # 处理每个目录
+    for info in directory_info:
+        directory = info['name']
+        rule_name = info['rule']
+        
+        # 获取对应的构建规则
+        if rule_name not in all_build_rules:
+            logger.error(f"错误：找不到构建规则 '{rule_name}' 用于目录 '{directory}'")
+            continue
+        
+        build_rule = all_build_rules[rule_name]
+        
         # 构造完整路径
         full_path = os.path.join(os.path.dirname(parent_dir), directory)
         try:
-            logger.info(f"\n{'='*30}\n▶ 开始构建目录: {directory}\n{'='*30}")
+            logger.info(f"\n{'='*30}\n▶ 开始构建目录: {directory} (使用规则: {rule_name})\n{'='*30}")
             total_start = time.time()
             
             for idx, rule in enumerate(build_rule, 1):
@@ -99,6 +120,7 @@ def main():
                             raise subprocess.CalledProcessError(proc.returncode, proc.args)
                 except subprocess.CalledProcessError as e:
                     logger.error("❌ 步骤失败 [退出码%d] - 命令: %s", e.returncode, e.cmd)
+                    logger.error("⚠️ 跳过剩余步骤，继续下一个目录")
                     sys.exit(e.returncode)
                 except subprocess.TimeoutExpired:
                     logger.error("⏰ 进程超时: %s", ' '.join(proc.args))
@@ -114,6 +136,9 @@ def main():
             logger.error(f"\n⛔ 构建中止：{directory} 存在失败步骤")
         except Exception as e:
             logger.error(f"\n⚠️ 未捕获异常：{str(e)}")
+            
+        total_duration = time.time() - total_start
+        logger.info(f"🌟 目录 {directory} 构建完成 (总耗时: {total_duration:.2f}秒)")
 
 if __name__ == '__main__':
     main()
