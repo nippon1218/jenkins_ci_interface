@@ -15,9 +15,6 @@ logger = logging.getLogger("SDCBuilder")
 def validate_build_rule(build_rules):
     if not isinstance(build_rules, list) or len(build_rules) == 0:
         return False, "构建规则必须是非空列表"
-    for rule in build_rules:
-        if not isinstance(rule, str) or not rule.startswith('make '):
-            return False, f"无效规则 '{rule}' - 必须是非空字符串且以'make'开头"
     return True, ""
 
 @contextmanager

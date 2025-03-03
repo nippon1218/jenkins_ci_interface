@@ -38,16 +38,9 @@ def get_directory_build_info(file_path):
     
     for directory in directories:
         if isinstance(directory, dict) and 'name' in directory:
-            # 新格式：包含name和rule属性
             result.append({
                 'name': directory['name'],
                 'rule': directory.get('rule', 'build_rule')  # 默认使用build_rule
-            })
-        elif isinstance(directory, str):
-            # 旧格式：只有目录名
-            result.append({
-                'name': directory,
-                'rule': 'build_rule'  # 默认使用build_rule
             })
     
     return result

@@ -12,6 +12,7 @@ build_rule:
   - make install
 
 python_rule:
+#  - export build_TEST=1
   - make purge2
   - make sdc2
   - make install2
